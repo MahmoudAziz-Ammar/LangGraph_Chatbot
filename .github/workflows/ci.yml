@@ -1,0 +1,34 @@
+name: CI — LangGraph Chatbot
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Récupère le code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 2. Install Python
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+
+      # 3. Install dépendances
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # 4. Vérifie que les imports marchent
+      - name: Check imports
+        run: python -c "from src.config import *; from src.state import *; print('✅ Imports OK')"
+
+      # 5. Build Docker
+      - name: Build Docker image
+        run: docker build -t langgraph_chatbot .
