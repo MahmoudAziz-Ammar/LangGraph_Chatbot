@@ -9,21 +9,21 @@ st.title("🕸️ LangGraph Chatbot")
 # ── Sidebar ────────────────────────────────────
 with st.sidebar:
     st.header("📂 Documents")
-    uploaded_file = st.file_uploader("Dépose ton PDF ici", type="pdf")
+    uploaded_files = st.file_uploader("Dépose tes PDFs ici", type="pdf", accept_multiple_files=True)
 
-    if uploaded_file is not None:
-        save_path = os.path.join("data/docs", uploaded_file.name)
-        
-        # Sauvegarde + indexation automatique dès le drop
-        with open(save_path, "wb") as f:
-            f.write(uploaded_file.getbuffer())
-        
-        with st.spinner("Indexation automatique..."):
-            build_vectorstore()
-        
-        st.success(f"✅ {uploaded_file.name} prêt !")
-        
-        # Reset le graphe pour prendre en compte le nouveau doc
+
+    if uploaded_files:
+        for uploaded_file in uploaded_files:
+            save_path = os.path.join("data/docs", uploaded_file.name)
+            with open(save_path, "wb") as f:
+                f.write(uploaded_file.getbuffer())
+            st.success(f"✅ {uploaded_file.name} uploadé !")
+
+            with st.spinner("Indexation automatique..."):
+                build_vectorstore()
+            
+            st.success("✅ Tous les documents sont prêts !")
+    
         if "graph" in st.session_state:
             del st.session_state["graph"]
 
