@@ -57,15 +57,21 @@ if question:
             "documents": [],
             "generation": "",
             "relevance_check": None,
-            "retry_count": 0
+            "retry_count": 0,
+            "messages": st.session_state.get("chat_messages", [])
         })
+    st.session_state.chat_messages = result.get("messages", [])
 
     answer = result["generation"]
     st.session_state.messages.append({"role": "assistant", "content": answer})
     with st.chat_message("assistant"):
         st.write(answer)
 
-    # Source = toujours le doc droppé
+    # Debug
+    st.write("relevance_check:", result["relevance_check"])
+    st.write("retry_count:", result["retry_count"])
+    st.write("nb docs trouvés:", len(result["documents"]))
+
     with st.expander("📄 Source"):
         for doc in result.get("documents", []):
             st.markdown(f"- `{doc.metadata.get('source', '?')}` — page {doc.metadata.get('page', '?')}")

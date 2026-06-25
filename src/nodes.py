@@ -16,13 +16,13 @@ def retrieve(state: GraphState) -> GraphState:
     return {**state, "documents": docs}
 
 # ── Nœud 2 : Grade Documents ───────────────────
+
 def grade_documents(state: GraphState) -> GraphState:
-    """Filtre les chunks non pertinents"""
     print("📊 [grade_documents]")
     prompt = PromptTemplate.from_template("""
-Tu es un évaluateur strict.
-Ce document est-il pertinent pour répondre à la question ?
-Réponds uniquement par "yes" ou "no", rien d'autre.
+Tu es un évaluateur. Ce document contient-il des informations 
+utiles pour répondre à la question, même partiellement ?
+Réponds uniquement par "yes" ou "no".
 
 Document : {document}
 Question : {question}
@@ -38,28 +38,46 @@ Réponse :""")
         if score.strip().lower() == "yes":
             relevant_docs.append(doc)
 
-    relevance = "yes" if relevant_docs else "no"
-    print(f"   → {len(relevant_docs)}/{len(state['documents'])} docs pertinents")
+    # Si aucun doc pertinent, on garde tous les docs quand même
+    if not relevant_docs:
+        relevant_docs = state["documents"]
+        relevance = "yes"
+    else:
+        relevance = "yes"
+
+    print(f"   → {len(relevant_docs)} docs pertinents")
     return {**state, "documents": relevant_docs, "relevance_check": relevance}
 
+
 # ── Nœud 3 : Generate ──────────────────────────
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+
 def generate(state: GraphState) -> GraphState:
-    """Génère la réponse finale"""
     print("💬 [generate]")
+    
+    if not state["documents"]:
+        return {**state, "generation": "Je n'ai pas trouvé de documents pertinents."}
+    
     context = "\n\n".join(doc.page_content for doc in state["documents"])
-    prompt = PromptTemplate.from_template("""
-Tu es un assistant expert. Réponds uniquement à partir du contexte.
+    messages = state.get("messages", [])
+    
+    system = SystemMessage(content=f"""
+Tu es un assistant expert. Réponds en français uniquement à partir du contexte.
 Si la réponse n'est pas dans le contexte, dis-le clairement.
 
 Contexte : {context}
-Question : {question}
-Réponse :""")
-    chain = prompt | llm | StrOutputParser()
-    generation = chain.invoke({
-        "context": context,
-        "question": state["question"]
-    })
-    return {**state, "generation": generation}
+""")
+    
+    human = HumanMessage(content=state["question"])
+    all_messages = [system] + messages + [human]
+    
+    response = llm.invoke(all_messages)
+    generation = response.content
+    
+    updated_messages = messages + [human, AIMessage(content=generation)]
+    
+    return {**state, "generation": generation, "messages": updated_messages}
+
 
 # ── Nœud 4 : Rewrite Query ─────────────────────
 def rewrite_query(state: GraphState) -> GraphState:

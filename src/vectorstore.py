@@ -26,12 +26,17 @@ def build_vectorstore():
     print(f"✅ Index FAISS sauvegardé")
     return vs
 
+_vectorstore_cache = None
+
 def load_vectorstore():
-    """Charge l'index FAISS existant"""
+    global _vectorstore_cache
+    if _vectorstore_cache is not None:
+        return _vectorstore_cache
     if not os.path.exists(VECTORSTORE_PATH):
         raise FileNotFoundError("Lance d'abord build_vectorstore()")
-    return FAISS.load_local(
+    _vectorstore_cache = FAISS.load_local(
         VECTORSTORE_PATH,
         get_embeddings(),
         allow_dangerous_deserialization=True
     )
+    return _vectorstore_cache
